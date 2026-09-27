@@ -1,23 +1,17 @@
 {
-  "name": "Local Universal File Previewer",
-  "short_name": "FilePreviewer",
-  "description": "A secure offline-capable PWA to preview local device images, PDFs, and Microsoft Word docs completely server-free.",
-  "start_url": "index.html",
-  "display": "standalone",
-  "background_color": "#f8fafc",
-  "theme_color": "#2563eb",
-  "orientation": "any",
+  "short_name": "StudioStudio",
+  "name": "Ultimate PWA File Studio Workspace",
   "icons": [
     {
       "src": "https://cdn-icons-png.flaticon.com/512/3342/3342137.png",
-      "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "https://cdn-icons-png.flaticon.com/512/3342/3342137.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "purpose": "any maskable"
     }
-  ]
+  ],
+  "start_url": ".",
+  "background_color": "#111827",
+  "theme_color": "#2563eb",
+  "display": "standalone",
+  "orientation": "portrait"
 }

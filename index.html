@@ -1,245 +1,388 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Local File Previewer PWA</title>
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#2563eb">
-  
-  <!-- Tailwind CSS for modern, clean UI styling -->
-  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-  
-  <!-- CDN Links for PDF rendering and DOCX parsing -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/docx-preview@0.1.18/dist/docx-preview.min.js"></script>
-
-  <style>
-    /* Styling fix for PDF canvas container */
-    #pdfCanvasContainer canvas {
-      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-      margin-bottom: 1.5rem;
-      max-width: 100%;
-      height: auto !important;
-    }
-    /* Ensure docx container matches app style */
-    .docx-wrapper {
-      background: transparent !important;
-      padding: 0 !important;
-    }
-    .docx {
-      background: white !important;
-      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1) !important;
-      border-radius: 0.5rem !important;
-      padding: 2rem !important;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Ultimate PWA File Studio</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/docx-preview@0.1.18/dist/docx-preview.min.js"></script>
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="https://unpkg.com/tesseract.js@v4.0.1/dist/tesseract.min.js"></script>
+    <style>
+        .drag-over { border-color: #3b82f6; background-color: rgba(59, 130, 246, 0.05); }
+        .dark .drag-over { background-color: rgba(59, 130, 246, 0.15); }
+        .sortable-ghost { opacity: 0.4; }
+    </style>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col font-sans">
+<body class="bg-gray-50 text-gray-900 transition-colors duration-200 dark:bg-gray-900 dark:text-gray-100 min-h-screen flex flex-col pb-10">
 
-  <!-- Header Banner -->
-  <header class="bg-blue-600 text-white shadow-md py-4 px-6 flex justify-between items-center">
-    <h1 class="text-xl font-bold tracking-tight">📁 PWA Local File Previewer</h1>
-    <button id="installBtn" class="hidden bg-white text-blue-600 px-4 py-2 rounded-lg font-semibold shadow hover:bg-blue-50 transition">
-      ⚡ Install App
-    </button>
-  </header>
+    <!-- Header & Theme Toggle -->
+    <header class="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 px-4 py-3 sticky top-0 z-50 shadow-xs flex justify-between items-center">
+        <h1 class="text-xl font-bold tracking-tight text-blue-600 dark:text-blue-400">PWA File Studio</h1>
+        <button id="themeToggle" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all font-medium text-sm flex items-center gap-2">
+            <span id="themeText">🌙 Dark Mode</span>
+        </button>
+    </header>
 
-  <!-- Main Content Layout -->
-  <main class="flex-1 max-w-5xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-    
-    <!-- Left Column: Input and Details -->
-    <div class="md:col-span-1 space-y-6">
-      <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
-        <h2 class="text-lg font-semibold mb-3">Select a Local File</h2>
-        <p class="text-sm text-slate-500 mb-4">Choose an image, PDF document, or Word file (.docx) directly from your device to see it previewed securely offline.</p>
-        
-        <!-- File Input Label acting as drop area wrapper -->
-        <label class="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-xl p-6 cursor-pointer bg-slate-50 hover:bg-blue-50/50 hover:border-blue-400 transition-all group">
-          <svg class="w-8 h-8 text-slate-400 group-hover:text-blue-500 mb-2 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
-          <span class="text-sm font-medium text-slate-600 group-hover:text-blue-600">Click to browse files</span>
-          <input type="file" id="fileInput" class="hidden" accept="image/*, application/pdf, .docx">
-        </label>
-      </div>
-
-      <!-- File Metadata Card -->
-      <div id="metaCard" class="hidden bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
-        <h3 class="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-3">File Properties</h3>
-        <div class="text-sm space-y-2">
-          <p class="truncate"><strong class="text-slate-600">Name:</strong> <span id="metaName" class="text-slate-900"></span></p>
-          <p><strong class="text-slate-600">Size:</strong> <span id="metaSize" class="text-slate-900"></span></p>
-          <p><strong class="text-slate-600">Type:</strong> <span id="metaType" class="text-slate-900"></span></p>
+    <main class="max-w-4xl w-full mx-auto p-4 space-y-6 flex-1">
+        <!-- Unified Dropzone File Picker -->
+        <div id="dropzone" class="border-2 border-dashed border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-2xl p-8 text-center cursor-pointer transition-all hover:border-blue-500 group relative">
+            <input type="file" id="fileInput" multiple class="absolute inset-0 opacity-0 cursor-pointer" accept="image/*,video/*,application/pdf,.doc,.docx">
+            <div class="space-y-2 pointer-events-none">
+                <div class="text-4xl">📂</div>
+                <p class="font-medium text-lg text-gray-700 dark:text-gray-300">Tap or Drag Files Here</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Supports Images, Videos, PDFs, and Word Documents</p>
+            </div>
         </div>
-      </div>
-    </div>
 
-    <!-- Right Column: Interactive Canvas/Preview Screen -->
-    <div class="md:col-span-2 flex flex-col">
-      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6 flex-1 flex flex-col min-h-[400px]">
-        <h2 class="text-lg font-semibold mb-4 pb-2 border-b border-slate-100 flex items-center justify-between">
-          <span>Live Interactive Preview</span>
-          <span id="previewStatus" class="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-medium">Empty</span>
-        </h2>
-
-        <!-- Render Target Zones -->
-        <div class="flex-1 flex flex-col justify-center items-center overflow-auto max-h-[70vh]">
-          
-          <!-- Default Empty Prompt -->
-          <div id="emptyState" class="text-center py-12">
-            <p class="text-slate-400 font-medium text-base">No file uploaded yet</p>
-            <p class="text-slate-400 text-xs mt-1">Images, PDFs, and Word documents load instantly here.</p>
-          </div>
-
-          <!-- Image Render Target -->
-          <img id="imagePreview" class="hidden max-w-full max-h-[65vh] rounded-lg shadow-md object-contain" alt="Selected Preview">
-
-          <!-- Mobile-Safe Cross-Platform PDF Engine Container -->
-          <div id="pdfCanvasContainer" class="hidden w-full flex flex-col items-center"></div>
-
-          <!-- Pure JS Client-side Word Render View Container -->
-          <div id="wordPreviewContainer" class="hidden w-full overflow-x-auto text-left"></div>
-
+        <!-- System Action Buttons Dashboard (Context-Aware) -->
+        <div id="actionPanel" class="hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 flex-wrap gap-3 items-center justify-between shadow-xs">
+            <div class="flex items-center gap-2">
+                <span class="text-xs uppercase bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 px-2.5 py-1 rounded-md font-bold" id="fileCountBadge">0 Files Selected</span>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+                <button id="mergeBtn" class="hidden bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2 rounded-xl shadow-xs transition-all">Merge PDFs</button>
+                <button id="exportOrderBtn" class="hidden bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-xl shadow-xs transition-all">Save Rearranged PDF</button>
+                <button id="ocrBtn" class="hidden bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-xl shadow-xs transition-all">Run OCR Text Scan</button>
+                <button id="clearBtn" class="bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-sm font-semibold px-4 py-2 rounded-xl transition-all">Clear All</button>
+            </div>
         </div>
-      </div>
-    </div>
-  </main>
 
-  <footer class="bg-slate-100 border-t border-slate-200 py-3 text-center text-xs text-slate-500">
-    Running locally as an standalone progressive web app. Files stay on your local device.
-  </footer>
+        <!-- Processing Loader Workspace Layout -->
+        <div id="statusLoader" class="hidden bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 p-4 rounded-xl flex items-center gap-3">
+            <div class="animate-spin text-xl">⏳</div>
+            <p id="statusMessage" class="text-sm font-medium text-blue-700 dark:text-blue-300">Processing file systems...</p>
+        </div>
 
-  <script>
-    // Initialize PDFJS global configurations via script dependencies
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+        <!-- Main Display Arena Panels -->
+        <div id="previewContainer" class="space-y-6">
+            <!-- OCR Code / Output Block Component -->
+            <div id="ocrWrapper" class="hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 space-y-3 shadow-xs">
+                <div class="flex justify-between items-center border-b border-gray-100 dark:border-gray-700 pb-2">
+                    <h3 class="font-bold text-sm tracking-wide text-gray-500 uppercase dark:text-gray-400">Extracted OCR Text Data</h3>
+                    <button id="copyOcrBtn" class="text-xs bg-gray-100 dark:bg-gray-700 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-500 font-semibold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1">
+                        <span id="copyText">📋 Copy Content</span>
+                    </button>
+                </div>
+                <textarea id="ocrTextArea" class="w-full h-40 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-3 text-sm font-mono focus:outline-none focus:border-blue-500" readonly placeholder="OCR Text output will generate here..."></textarea>
+            </div>
 
-    const fileInput = document.getElementById('fileInput');
-    const emptyState = document.getElementById('emptyState');
-    const imagePreview = document.getElementById('imagePreview');
-    const pdfCanvasContainer = document.getElementById('pdfCanvasContainer');
-    const wordPreviewContainer = document.getElementById('wordPreviewContainer');
-    
-    const metaCard = document.getElementById('metaCard');
-    const metaName = document.getElementById('metaName');
-    const metaSize = document.getElementById('metaSize');
-    const metaType = document.getElementById('metaType');
-    const previewStatus = document.getElementById('previewStatus');
-
-    // Keep track of active URL object allocations to maintain optimal sandbox memory
-    let currentObjectUrl = null;
-
-    fileInput.addEventListener('change', async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      // Clean up past ObjectURLs to avoid structural memory leaks in long sessions
-      if (currentObjectUrl) {
-        URL.revokeObjectURL(currentObjectUrl);
-      }
-
-      // Populate file specifications details dashboard UI panel
-      metaCard.classList.remove('hidden');
-      metaName.textContent = file.name;
-      metaSize.textContent = (file.size / 1024 / 1024).toFixed(2) + ' MB';
-      metaType.textContent = file.type || 'Unknown Type / Extension';
-
-      // Hide all standard canvas zones ready for conditional routing
-      emptyState.classList.add('hidden');
-      imagePreview.classList.add('hidden');
-      pdfCanvasContainer.classList.add('hidden');
-      wordPreviewContainer.classList.add('hidden');
-      pdfCanvasContainer.innerHTML = '';
-      wordPreviewContainer.innerHTML = '';
-
-      // Initialize unique local memory allocation hook
-      currentObjectUrl = URL.createObjectURL(file);
-
-      // Route 1: Local Image Parser Routing
-      if (file.type.startsWith('image/')) {
-        previewStatus.textContent = 'Image';
-        previewStatus.className = 'text-xs bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full font-medium';
-        imagePreview.src = currentObjectUrl;
-        imagePreview.classList.remove('hidden');
-      } 
-      // Route 2: Cross-platform Canvas Rendering via Core PDF.js Architecture
-      else if (file.type === 'application/pdf') {
-        previewStatus.textContent = 'PDF Document';
-        previewStatus.className = 'text-xs bg-red-100 text-red-700 px-2.5 py-1 rounded-full font-medium';
-        pdfCanvasContainer.classList.remove('hidden');
-        
-        try {
-          const loadingTask = pdfjsLib.getDocument(currentObjectUrl);
-          const pdf = await loadingTask.promise;
-          
-          // Step-render every layout layer block dynamically to support multi-page scrolls smoothly
-          for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-            const page = await pdf.getPage(pageNum);
-            const viewport = page.getViewport({ scale: 1.5 });
+            <!-- Visual File Render Target Areas -->
+            <div id="mediaContainer" class="hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 flex justify-center items-center shadow-xs overflow-hidden"></div>
+            <div id="wordContainer" class="hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-6 shadow-xs overflow-x-auto"></div>
             
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
-            canvas.height = viewport.height;
-            canvas.width = viewport.width;
-            
-            pdfCanvasContainer.appendChild(canvas);
-            
-            await page.render({
-              canvasContext: context,
-              viewport: viewport
-            }).promise;
-          }
-        } catch (error) {
-          console.error("PDF engine crash detail:", error);
-          pdfCanvasContainer.innerHTML = `<p class="text-red-500 font-semibold p-4">Could not parse PDF safely: ${error.message}</p>`;
+            <!-- Reorderable Grid Interface Container -->
+            <div id="pdfGridWrapper" class="hidden space-y-2">
+                <h3 class="text-sm font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400 px-1">PDF Page Management Grid (Drag items to reorder)</h3>
+                <div id="pdfPageGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 p-1"></div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
+        const html = document.documentElement;
+        const themeToggle = document.getElementById('themeToggle');
+        const themeText = document.getElementById('themeText');
+        const fileInput = document.getElementById('fileInput');
+        const dropzone = document.getElementById('dropzone');
+        const actionPanel = document.getElementById('actionPanel');
+        const fileCountBadge = document.getElementById('fileCountBadge');
+        const mergeBtn = document.getElementById('mergeBtn');
+        const exportOrderBtn = document.getElementById('exportOrderBtn');
+        const ocrBtn = document.getElementById('ocrBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const statusLoader = document.getElementById('statusLoader');
+        const statusMessage = document.getElementById('statusMessage');
+        const ocrWrapper = document.getElementById('ocrWrapper');
+        const ocrTextArea = document.getElementById('ocrTextArea');
+        const copyOcrBtn = document.getElementById('copyOcrBtn');
+        const copyText = document.getElementById('copyText');
+        const mediaContainer = document.getElementById('mediaContainer');
+        const wordContainer = document.getElementById('wordContainer');
+        const pdfGridWrapper = document.getElementById('pdfGridWrapper');
+        const pdfPageGrid = document.getElementById('pdfPageGrid');
+
+        let loadedFiles = [];
+        let pdfPagesArray = []; // Stores individual page models { fileIndex, pageNum, canvasDataUrl }
+        let draggedItem = null;
+
+        // --- Theme Engine Setup ---
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            html.classList.add('dark');
+            themeText.innerText = '☀️ Light Mode';
+        } else {
+            html.classList.remove('dark');
+            themeText.innerText = '🌙 Dark Mode';
         }
-      } 
-      // Route 3: Client-side Native OpenXML Decompressor to Render Engine
-      else if (file.name.endsWith('.docx') || file.name.endsWith('.doc')) {
-        previewStatus.textContent = 'Word Document';
-        previewStatus.className = 'text-xs bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full font-medium';
-        wordPreviewContainer.classList.remove('hidden');
-        
-        try {
-          const arrayBuffer = await file.arrayBuffer();
-          // Use client side docx renderer to map raw openXML directly into semantic structural components
-          await docx.renderAsync(arrayBuffer, wordPreviewContainer);
-        } catch (error) {
-          console.error("Word conversion structure failure:", error);
-          wordPreviewContainer.innerHTML = `<p class="text-red-500 font-semibold p-4">Could not parse Word document safely: ${error.message}</p>`;
+
+        themeToggle.addEventListener('click', () => {
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                localStorage.theme = 'light';
+                themeText.innerText = '🌙 Dark Mode';
+            } else {
+                html.classList.add('dark');
+                localStorage.theme = 'dark';
+                themeText.innerText = '☀️ Light Mode';
+            }
+        });
+
+        // --- Event Listeners Integration ---
+        dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('drag-over'); });
+        dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('drag-over');
+            if (e.dataTransfer.files.length > 0) handleFiles(e.dataTransfer.files);
+        });
+        fileInput.addEventListener('change', (e) => { if (e.target.files.length > 0) handleFiles(e.target.files); });
+        clearBtn.addEventListener('click', resetStudio);
+
+        function showLoader(msg) { statusLoader.classList.remove('hidden'); statusMessage.innerText = msg; }
+        function hideLoader() { statusLoader.classList.add('hidden'); }
+
+        // --- File System Processing Logic ---
+        async function handleFiles(files) {
+            resetStudio();
+            loadedFiles = Array.from(files);
+            if (loadedFiles.length === 0) return;
+
+            actionPanel.classList.remove('hidden');
+            fileCountBadge.innerText = `${loadedFiles.length} File(s) Staged`;
+
+            const firstFile = loadedFiles[0];
+            const fileUrl = URL.createObjectURL(firstFile);
+
+            // Context-Based Feature Routing
+            if (firstFile.type.startsWith('image/')) {
+                renderImage(fileUrl);
+                ocrBtn.classList.remove('hidden');
+                ocrBtn.onclick = () => runOcrEngine(firstFile);
+            } else if (firstFile.type.startsWith('video/')) {
+                renderVideo(fileUrl);
+            } else if (firstFile.type === 'application/pdf') {
+                if (loadedFiles.length > 1) {
+                    mergeBtn.classList.remove('hidden');
+                    mergeBtn.onclick = mergePdfFiles;
+                }
+                showLoader("Parsing PDF layout data structures...");
+                await loadPdfGridWorkspace();
+                hideLoader();
+            } else if (firstFile.name.endsWith('.docx') || firstFile.name.endsWith('.doc')) {
+                renderWordDocument(firstFile);
+            }
         }
-      } else {
-        previewStatus.textContent = 'Unsupported Format';
-        previewStatus.className = 'text-xs bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full font-medium';
-        emptyState.classList.remove('hidden');
-        emptyState.innerHTML = `<p class="text-amber-600 font-semibold">Preview mapping not registered for this extension format.</p>`;
-      }
-    });
 
-    // Register Service Worker to bind cross-domain service cache lifecycle rules
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js')
-          .then(reg => console.log('Service Worker successfully registered with lifecycle context:', reg.scope))
-          .catch(err => console.error('Service worker installation interrupted:', err));
-      });
-    }
+        function resetStudio() {
+            mediaContainer.innerHTML = '';
+            wordContainer.innerHTML = '';
+            pdfPageGrid.innerHTML = '';
+            ocrTextArea.value = '';
+            mediaContainer.classList.add('hidden');
+            wordContainer.classList.add('hidden');
+            pdfGridWrapper.classList.add('hidden');
+            ocrWrapper.classList.add('hidden');
+            mergeBtn.classList.add('hidden');
+            exportOrderBtn.classList.add('hidden');
+            ocrBtn.classList.add('hidden');
+            actionPanel.classList.add('hidden');
+            hideLoader();
+            pdfPagesArray = [];
+            loadedFiles = [];
+        }
 
-    // Capture standard system context PWA installation requests natively
-    let deferredPrompt;
-    const installBtn = document.getElementById('installBtn');
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
-      installBtn.classList.remove('hidden');
-    });
+        // --- Media Layout Viewports ---
+        function renderImage(url) {
+            mediaContainer.classList.remove('hidden');
+            mediaContainer.innerHTML = `<img src="${url}" class="max-h-96 w-auto rounded-xl object-contain shadow-xs">`;
+        }
 
-    installBtn.addEventListener('click', async () => {
-      if (!deferredPrompt) return;
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      console.log(`PWA distribution flow outcome selected: ${outcome}`);
-      deferredPrompt = null;
-      installBtn.classList.add('hidden');
-    });
-  </script>
+        function renderVideo(url) {
+            mediaContainer.classList.remove('hidden');
+            mediaContainer.innerHTML = `<video src="${url}" controls autoplay class="w-full max-h-96 rounded-xl shadow-xs bg-black"></video>`;
+        }
+
+        function renderWordDocument(file) {
+            wordContainer.classList.remove('hidden');
+            showLoader("Deconstructing Microsoft XML Document structures...");
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    await docx.renderAsync(e.target.result, wordContainer);
+                    hideLoader();
+                } catch (err) {
+                    wordContainer.innerHTML = `<p class="text-red-500 text-sm font-semibold">Failed to parse Word Document rendering pipeline</p>`;
+                    hideLoader();
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // --- Advanced Interactive PDF Grid Engine ---
+        async function loadPdfGridWorkspace() {
+            pdfPagesArray = [];
+            pdfPageGrid.innerHTML = '';
+            pdfGridWrapper.classList.remove('hidden');
+            exportOrderBtn.classList.remove('hidden');
+
+            for (let fIdx = 0; fIdx < loadedFiles.length; fIdx++) {
+                if (loadedFiles[fIdx].type !== 'application/pdf') continue;
+                const arrayBuffer = await loadedFiles[fIdx].arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+                for (let pNum = 1; pNum <= pdf.numPages; pNum++) {
+                    const page = await pdf.getPage(pNum);
+                    const viewport = page.getViewport({ scale: 0.3 });
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+
+                    await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+                    const dataUrl = canvas.toDataURL();
+
+                    pdfPagesArray.push({ fileIndex: fIdx, pageNum: pNum, id: `p-${fIdx}-${pNum}` });
+                    createPageThumbnailElement(dataUrl, `p-${fIdx}-${pNum}`, `Doc ${fIdx + 1} - Page ${pNum}`);
+                }
+            }
+        }
+
+        function createPageThumbnailElement(src, id, label) {
+            const card = document.createElement('div');
+            card.id = id;
+            card.draggable = true;
+            card.className = "bg-gray-100 dark:bg-gray-800 p-2 rounded-xl border border-gray-200 dark:border-gray-700 shadow-xs flex flex-col items-center gap-2 cursor-grab active:cursor-grabbing transition-transform";
+            card.innerHTML = `
+                <img src="${src}" class="w-full h-auto border border-gray-300 dark:border-gray-600 rounded-md object-contain">
+                <span class="text-[10px] font-bold text-gray-500 dark:text-gray-400">${label}</span>
+            `;
+
+            // HTML5 Drag and Drop Event Structures
+            card.addEventListener('dragstart', () => { draggedItem = card; setTimeout(() => card.classList.add('sortable-ghost'), 0); });
+            card.addEventListener('dragend', () => { card.classList.remove('sortable-ghost'); draggedItem = null; });
+            card.addEventListener('dragover', (e) => e.preventDefault());
+            card.addEventListener('drop', (e) => {
+                e.preventDefault();
+                if (draggedItem && draggedItem !== card) {
+                    const children = Array.from(pdfPageGrid.children);
+                    const draggedIdx = children.indexOf(draggedItem);
+                    const targetIdx = children.indexOf(card);
+
+                    if (draggedIdx < targetIdx) {
+                        pdfPageGrid.insertBefore(draggedItem, card.nextSibling);
+                    } else {
+                        pdfPageGrid.insertBefore(draggedItem, card);
+                    }
+                    
+                    // Synchronise Internal Array Index Layout Positions
+                    const updatedChildren = Array.from(pdfPageGrid.children);
+                    const newPagesArray = updatedChildren.map(child => pdfPagesArray.find(p => p.id === child.id));
+                    pdfPagesArray = newPagesArray;
+                }
+            });
+
+            pdfPageGrid.appendChild(card);
+        }
+
+        // --- PDF Modification Operations (Merge / Export Order) ---
+        exportOrderBtn.onclick = async () => {
+            if (pdfPagesArray.length === 0) return;
+            showLoader("Compiling custom PDF page distribution scheme...");
+            try {
+                const newDoc = await PDFLib.PDFDocument.create();
+                const fileBuffers = [];
+                for (let i = 0; i < loadedFiles.length; i++) {
+                    fileBuffers.push(await loadedFiles[i].arrayBuffer());
+                }
+
+                for (const pMeta of pdfPagesArray) {
+                    const sourceDoc = await PDFLib.PDFDocument.load(fileBuffers[pMeta.fileIndex]);
+                    const [copiedPage] = await newDoc.copyPages(sourceDoc, [pMeta.pageNum - 1]);
+                    newDoc.addPage(copiedPage);
+                }
+
+                const pdfBytes = await newDoc.save();
+                downloadBlobFile(pdfBytes, 'rearranged_document.pdf', 'application/pdf');
+                hideLoader();
+            } catch (err) {
+                alert("Failed to export compiled PDF document");
+                hideLoader();
+            }
+        };
+
+        async function mergePdfFiles() {
+            showLoader("Compiling multiple standalone documents into array sequence...");
+            try {
+                const mergedDoc = await PDFLib.PDFDocument.create();
+                for (const file of loadedFiles) {
+                    if (file.type !== 'application/pdf') continue;
+                    const buffer = await file.arrayBuffer();
+                    const doc = await PDFLib.PDFDocument.load(buffer);
+                    const copiedPages = await mergedDoc.copyPages(doc, doc.getPageIndices());
+                    copiedPages.forEach((page) => mergedDoc.addPage(page));
+                }
+                const mergedBytes = await mergedDoc.save();
+                downloadBlobFile(mergedBytes, 'merged_document.pdf', 'application/pdf');
+                hideLoader();
+                resetStudio();
+            } catch (err) {
+                alert("Critical error parsing during compilation matrix merge.");
+                hideLoader();
+            }
+        }
+
+        function downloadBlobFile(bytes, filename, contentType) {
+            const blob = new Blob([bytes], { type: contentType });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+        }
+
+        // --- High-Performance OCR Core Engine via Tesseract.js ---
+        async function runOcrEngine(sourceMedia) {
+            ocrWrapper.classList.remove('hidden');
+            ocrTextArea.value = "Initialising Tesseract localized worker core components...";
+            showLoader("Processing character recognition arrays...");
+            try {
+                const result = await Tesseract.recognize(sourceMedia, 'eng', {
+                    logger: m => { if(m.status === 'recognizing') statusMessage.innerText = `Running OCR Text Scan: ${Math.round(m.progress * 100)}%`; }
+                });
+                ocrTextArea.value = result.data.text || "No legible text structure found in input asset context.";
+                hideLoader();
+            } catch (err) {
+                ocrTextArea.value = "Failed execution processing matrix run inside Tesseract system.";
+                hideLoader();
+            }
+        }
+
+        // --- Clipboard Intercept Controller ---
+        copyOcrBtn.addEventListener('click', () => {
+            if (!ocrTextArea.value) return;
+            navigator.clipboard.writeText(ocrTextArea.value).then(() => {
+                copyText.innerText = "✅ Copied!";
+                copyOcrBtn.classList.add('bg-blue-600', 'text-white');
+                setTimeout(() => {
+                    copyText.innerText = "📋 Copy Content";
+                    copyOcrBtn.classList.remove('bg-blue-600', 'text-white');
+                }, 2000);
+            });
+        });
+
+        // --- Background System Daemon Registrations ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => console.log('Worker system operational scope locked:', reg.scope))
+                    .catch(err => console.error('Lifecycle daemon failure:', err));
+            });
+        }
+    </script>
 </body>
 </html>
