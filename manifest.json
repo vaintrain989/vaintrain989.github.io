@@ -1,17 +1,17 @@
 {
-  "short_name": "StudioWS",
-  "name": "PWA Advanced File Studio Workspace",
+  "short_name": "MobileDoc",
+  "name": "MobileDoc Rich Text Editor",
   "icons": [
     {
-      "src": "https://flaticon.com",
+      "src": "https://jsdelivr.net",
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "any maskable"
     }
   ],
-  "start_url": ".",
-  "background_color": "#111827",
-  "theme_color": "#2563eb",
+  "start_url": "./index.html",
+  "background_color": "#f9fafb",
   "display": "standalone",
-  "orientation": "any"
+  "theme_color": "#4f46e5",
+  "description": "A mobile-optimised rich text processor with a tiered automatic saving engine."
 }
