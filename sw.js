@@ -1,6 +1,5 @@
-const CACHE_NAME = 'file-studio-v3';
-const ASSETS_TO_FREEZE = [
-  '.',
+const CACHE_NAME = 'studio-workspace-v4';
+const ASSETS_TO_CACHE = [
   'index.html',
   'manifest.json',
   'https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4',
@@ -14,18 +13,18 @@ const ASSETS_TO_FREEZE = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_FREEZE);
+      return cache.addAll(ASSETS_TO_CACHE);
     }).then(() => self.skipWaiting())
   );
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => {
+    caches.keys().then((cacheNames) => {
       return Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
+        cacheNames.map((cache) => {
+          if (cache !== CACHE_NAME) {
+            return caches.delete(cache);
           }
         })
       );
@@ -34,10 +33,28 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  // Pass-through rule for streaming external videos directly over network without using local memory cache allocation slots
+  if (event.request.url.includes('video') || event.request.destination === 'video') {
+    return fetch(event.request);
+  }
+
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) return cachedResponse;
-      return fetch(event.request);
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+      return fetch(event.request).then((networkResponse) => {
+        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+          return networkResponse;
+        }
+        const responseToCache = networkResponse.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, responseToCache);
+        });
+        return networkResponse;
+      }).catch(() => {
+        // Fallback or ignore if network fails
+      });
     })
   );
 });
