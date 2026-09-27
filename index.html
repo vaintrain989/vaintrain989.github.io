@@ -2,420 +2,163 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PWA File Studio</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PWA File Studio Workspace</title>
     <link rel="manifest" href="manifest.json">
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/docx-preview@0.1.18/dist/docx-preview.min.js"></script>
-    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-    <script src="https://unpkg.com/tesseract.js@v4.0.1/dist/tesseract.min.js"></script>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <!-- Web Engines -->
+    <script src="https://jsdelivr.net"></script>
+    <script src="https://cloudflare.com"></script>
+    <script src="https://jsdelivr.net"></script>
+    <script src="https://unpkg.com"></script>
+    <script src="https://unpkg.com"></script>
     <style>
-        .drag-over { border-color: #3b82f6 !important; background-color: rgba(59, 130, 246, 0.05); }
-        .page-thumb { cursor: grab; transition: transform 0.2s; }
-        .page-thumb:active { cursor: grabbing; transform: scale(1.05); }
+        :root { --bg: #f3f4f6; --text: #111827; --card: #ffffff; --border: #e5e7eb; }
+        .dark { --bg: #111827; --text: #f3f4f6; --card: #1f2937; --border: #374151; }
+        body { background-color: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; transition: all 0.2s ease; margin: 0; padding-bottom: 40px; }
+        .container { max-width: 800px; margin: 0 auto; padding: 16px; }
+        .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .btn { background: #2563eb; color: white; padding: 10px 16px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer; font-size: 14px; }
+        .btn:hover { background: #1d4ed8; }
+        .btn-green { background: #059669; }
+        .btn-green:hover { background: #047857; }
+        .input-text { flex: 1; padding: 10px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 14px; }
+        .grid-preview { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; margin-top: 12px; }
+        .sortable-thumb { border: 2px solid var(--border); border-radius: 8px; overflow: hidden; position: relative; background: #000; cursor: grab; }
+        .sortable-thumb canvas { width: 100%; display: block; }
+        .page-num { position: absolute; bottom: 4px; left: 4px; background: rgba(0,0,0,0.6); color: white; padding: 2px 6px; font-size: 10px; border-radius: 4px; }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-900 transition-colors duration-200 dark:bg-gray-900 dark:text-gray-100 min-h-screen flex flex-col pb-10">
-    <header class="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 px-4 py-3 sticky top-0 z-50 shadow-xs flex justify-between items-center">
-        <h1 class="text-xl font-bold tracking-tight text-blue-600 dark:text-blue-400">PWA File Studio</h1>
-        <button id="themeToggle" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all font-medium text-sm flex items-center gap-2">
-            <span id="themeText">🌙 Dark Mode</span>
-        </button>
-    </header>
+<body>
 
-    <main class="max-w-4xl w-full mx-auto p-4 flex-1 space-y-6">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <!-- Local Dropzone Box -->
-            <div id="dropzone" class="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-2xl p-6 text-center cursor-pointer hover:border-blue-500 transition-colors bg-white dark:bg-gray-800 shadow-xs flex flex-col justify-center items-center min-h-[160px]">
-                <span class="text-3xl mb-2">📁</span>
-                <p class="text-sm font-semibold">Drag & drop files or click to upload</p>
-                <p class="text-xs text-gray-400 mt-1">Supports Images, PDFs, and DOCX files</p>
-                <input type="file" id="fileInput" class="hidden" multiple accept="image/*,application/pdf,.docx,.doc">
-            </div>
+    <div style="background: var(--card); border-b: 1px solid var(--border); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+        <h1 style="margin: 0; font-size: 18px; color: #2563eb;">⚙️ PWA Advanced Studio</h1>
+        <button id="themeToggle" style="background: transparent; border: 1px solid var(--border); padding: 6px 12px; border-radius: 8px; color: var(--text); cursor: pointer; font-size: 12px;">🌙 Theme</button>
+    </div>
 
-            <!-- Online Stream Box -->
-            <div class="border border-gray-200 dark:border-gray-800 rounded-2xl p-6 bg-white dark:bg-gray-800 shadow-xs flex flex-col justify-center">
-                <h3 class="font-bold text-sm text-gray-500 dark:text-gray-400 mb-2延 uppercase tracking-wider">Stream Online Video</h3>
-                <p class="text-xs text-gray-400 dark:text-gray-500 mb-4">Paste a direct public video link ending in a raw media format (e.g., .mp4, .mov).</p>
-                <div class="flex gap-2">
-                    <input type="url" id="videoUrlInput" placeholder="https://example.com/movie.mp4" class="flex-1 px-3 py-2 text-sm rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-hidden focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-gray-100">
-                    <button id="streamUrlBtn" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm px-4 py-2 rounded-xl transition-all shadow-xs cursor-pointer whitespace-nowrap">Stream Link</button>
-                </div>
+    <div class="container">
+        <!-- 📺 VIDEO STREAM LINK CONTROLLER -->
+        <div class="card">
+            <h3 style="margin-top:0; font-size:15px;">📺 Stream Online Video Link</h3>
+            <p style="font-size:12px; opacity:0.7; margin-bottom:12px;">Paste a direct web link pointing straight to an online media file (.mp4, .mov, etc.)</p>
+            <div style="display: flex; gap: 8px;">
+                <input type="url" id="videoUrlInput" placeholder="https://example.com" class="input-text">
+                <button id="streamUrlBtn" class="btn">Stream Video</button>
             </div>
         </div>
 
-        <!-- Global Status Messages -->
-        <div id="statusMessage" class="hidden p-3 rounded-xl text-sm font-medium text-center"></div>
-
-        <!-- Global Control Panel for Actions -->
-        <div id="actionControls" class="hidden flex flex-wrap gap-2 p-4 border border-gray-200 dark:border-gray-800 rounded-2xl bg-white dark:bg-gray-800 shadow-xs">
-            <button id="runOcrBtn" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm px-4 py-2 rounded-xl transition-all shadow-xs cursor-pointer hidden">🔍 Run OCR Text Scan</button>
-            <button id="mergePdfBtn" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm px-4 py-2 rounded-xl transition-all shadow-xs cursor-pointer hidden">🗂️ Merge Uploaded PDFs</button>
-            <button id="savePdfOrderBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm px-4 py-2 rounded-xl transition-all shadow-xs cursor-pointer hidden">💾 Export Sorted PDF</button>
+        <!-- 📂 LOCAL FILE CHOOSE CONTROLLER -->
+        <div class="card" style="text-align: center; border-style: dashed; border-width: 2px;" id="dropzone">
+            <p style="margin: 0 0 12px 0; font-weight: 500;">Select Local Device Files</p>
+            <input type="file" id="fileInput" multiple accept="image/*,application/pdf,.docx,.doc,.mp4,.mov" style="display: none;">
+            <button onclick="document.getElementById('fileInput').click()" class="btn">Choose Files</button>
+            <p style="font-size: 11px; opacity: 0.6; margin: 8px 0 0 0;">Supports Images, PDFs, Word Docs, and Local Videos</p>
         </div>
 
-        <!-- Preview Areas Container -->
-        <div id="previewArea" class="space-y-4">
-            <!-- Image Area -->
-            <img id="imagePreview" class="hidden max-w-full h-auto mx-auto rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs" alt="Image preview">
-            
-            <!-- Video Container -->
-            <div id="videoPreviewContainer" class="hidden space-y-4 border border-gray-200 dark:border-gray-800 rounded-2xl bg-white dark:bg-gray-800 p-4 shadow-sm">
-                <h3 class="font-bold text-md text-gray-700 dark:text-gray-300">📺 Video Workspace</h3>
-                <video id="videoPlayer" controls playsinline class="w-full rounded-xl max-h-96 bg-black shadow-inner"></video>
-            </div>
+        <!-- WORKSPACE AREA PREVIEWS -->
+        <div id="videoContainer" class="card" style="display: none;">
+            <video id="mainVideoPlayer" controls playsinline style="width: 100%; border-radius: 12px; background: #000;"></video>
+        </div>
 
-            <!-- PDF Grid Editor for sorting -->
-            <div id="pdfEditorContainer" class="hidden space-y-3">
-                <h3 class="font-bold text-md text-gray-700 dark:text-gray-300">📄 PDF Page Reorder Canvas</h3>
-                <div id="pdfPagesGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 p-4 border border-gray-200 dark:border-gray-800 rounded-2xl bg-white dark:bg-gray-800 shadow-xs"></div>
-            </div>
-
-            <!-- Word Preview Area -->
-            <div id="wordPreviewContainer" class="hidden p-6 border border-gray-200 dark:border-gray-800 rounded-2xl bg-white text-black shadow-xs max-h-[500px] overflow-y-auto"></div>
-
-            <!-- Interactive OCR Edit Module -->
-            <div id="ocrEditorContainer" class="hidden border border-gray-200 dark:border-gray-800 rounded-2xl bg-white dark:bg-gray-800 p-4 shadow-xs space-y-3">
-                <div class="flex justify-between items-center">
-                    <h3 class="font-bold text-md text-gray-700 dark:text-gray-300">✏️ Live OCR Text Editor</h3>
-                    <div class="flex gap-2">
-                        <button id="copyOcrTextBtn" class="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 font-semibold text-sm px-3 py-2 rounded-xl transition-all shadow-xs cursor-pointer">📋 Copy Text</button>
-                        <button id="exportOcrPdfBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm px-4 py-2 rounded-xl transition-all shadow-xs cursor-pointer">💾 Export Searchable PDF</button>
-                    </div>
-                </div>
-                <div id="ocrEditableContent" class="w-full min-h-[150px] max-h-60 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-xl p-3 bg-gray-50 dark:bg-gray-900 font-mono text-sm focus:outline-hidden text-gray-900 dark:text-gray-100" contenteditable="true">
-                    Select a file and run OCR text scan to open the editor...
-                </div>
+        <div id="imageContainer" class="card" style="display: none; text-align: center;">
+            <img id="mainImagePreview" style="max-width: 100%; max-height: 400px; border-radius: 12px;">
+            <div style="margin-top: 12px;">
+                <button id="runOcrBtn" class="btn btn-green">🔍 Run OCR Text Scan</button>
             </div>
         </div>
-    </main>
+
+        <div id="docxContainer" class="card" style="display: none;">
+            <div id="docxRenderDiv"></div>
+        </div>
+
+        <div id="pdfContainer" class="card" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <h4 style="margin:0;">📄 PDF Page Organizer</h4>
+                <div style="display:flex; gap:8px;">
+                    <button id="mergePdfBtn" class="btn" style="display:none;">Merge PDFs</button>
+                    <button id="savePdfOrderBtn" class="btn btn-green">Export New Order</button>
+                </div>
+            </div>
+            <div id="pdfPageGrid" class="grid-preview"></div>
+        </div>
+
+        <!-- ✏️ LIVE OCR TEXT INTERACTIVE CONTAINER -->
+        <div id="ocrContainer" class="card" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <h4 style="margin:0;">✏️ Interactive OCR Text Editor</h4>
+                <button id="copyOcrBtn" class="btn" style="padding: 6px 12px; font-size:12px;">📋 Copy Text</button>
+            </div>
+            <div id="ocrEditableArea" contenteditable="true" style="min-height: 120px; max-height: 250px; overflow-y: auto; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); font-family: monospace; font-size: 13px; outline: none;"></div>
+            <div style="margin-top:12px; text-align: right;">
+                <button id="compileOcrPdfBtn" class="btn btn-green">💾 Export Searchable PDF</button>
+            </div>
+        </div>
+    </div>
 
     <script>
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cloudflare.com';
+        
+        let activeFiles = [];
+        let pdfPagesArray = [];
+        let currentTargetOcrImage = null;
 
-        // Dark/Light Mode Theme Toggle
+        // Theme Switcher Logic
         const themeToggle = document.getElementById('themeToggle');
-        const themeText = document.getElementById('themeText');
-        
-        function applyTheme(isDark) {
-            if (isDark) {
-                document.documentElement.classList.add('dark');
-                themeText.textContent = '☀️ Light Mode';
-            } else {
-                document.documentElement.classList.remove('dark');
-                themeText.textContent = '🌙 Dark Mode';
-            }
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
         }
-        
-        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        let isDarkMode = localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && systemPrefersDark);
-        applyTheme(isDarkMode);
-
         themeToggle.addEventListener('click', () => {
-            isDarkMode = !isDarkMode;
-            localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
-            applyTheme(isDarkMode);
-        });
-
-        // App Workspace State
-        let uploadedFiles = [];
-        let loadedPdfDocs = []; // Array of { file, pdfLibDoc, numPages, pageImagesUrls[] }
-        let currentTargetFileForOcr = null;
-
-        // UI Selectors
-        const dropzone = document.getElementById('dropzone');
-        const fileInput = document.getElementById('fileInput');
-        const videoUrlInput = document.getElementById('videoUrlInput');
-        const streamUrlBtn = document.getElementById('streamUrlBtn');
-        const statusMessage = document.getElementById('statusMessage');
-        const actionControls = document.getElementById('actionControls');
-        const runOcrBtn = document.getElementById('runOcrBtn');
-        const mergePdfBtn = document.getElementById('mergePdfBtn');
-        const savePdfOrderBtn = document.getElementById('savePdfOrderBtn');
-
-        const imagePreview = document.getElementById('imagePreview');
-        const videoPreviewContainer = document.getElementById('videoPreviewContainer');
-        const videoPlayer = document.getElementById('videoPlayer');
-        const pdfEditorContainer = document.getElementById('pdfEditorContainer');
-        const pdfPagesGrid = document.getElementById('pdfPagesGrid');
-        const wordPreviewContainer = document.getElementById('wordPreviewContainer');
-        const ocrEditorContainer = document.getElementById('ocrEditorContainer');
-        const ocrEditableContent = document.getElementById('ocrEditableContent');
-        const copyOcrTextBtn = document.getElementById('copyOcrTextBtn');
-        const exportOcrPdfBtn = document.getElementById('exportOcrPdfBtn');
-
-        // Drag and drop event wiring
-        dropzone.addEventListener('click', () => fileInput.click());
-        dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('drag-over'); });
-        dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
-        dropzone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropzone.classList.remove('drag-over');
-            if (e.dataTransfer.files.length > 0) handleFiles(e.dataTransfer.files);
-        });
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) handleFiles(e.target.files);
-        });
-
-        // Stream link button wire-up
-        streamUrlBtn.addEventListener('click', () => {
-            const url = videoUrlInput.value.trim();
-            if (!url) return;
-            resetWorkspace();
-            videoPreviewContainer.classList.remove('hidden');
-            videoPlayer.src = url;
-            videoPlayer.load();
-            videoPlayer.play().catch(() => {
-                showStatus("Error playing stream. Make sure it's a direct video link that supports CORS rules.", "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400");
-            });
-        });
-
-        function showStatus(msg, classes) {
-            statusMessage.textContent = msg;
-            statusMessage.className = `p-3 rounded-xl text-sm font-medium text-center ${classes}`;
-        }
-
-        function resetWorkspace() {
-            statusMessage.classList.add('hidden');
-            actionControls.classList.add('hidden');
-            runOcrBtn.classList.add('hidden');
-            mergePdfBtn.classList.add('hidden');
-            savePdfOrderBtn.classList.add('hidden');
-            
-            imagePreview.classList.add('hidden');
-            videoPreviewContainer.classList.add('hidden');
-            pdfEditorContainer.classList.add('hidden');
-            wordPreviewContainer.classList.add('hidden');
-            ocrEditorContainer.classList.add('hidden');
-            
-            videoPlayer.src = "";
-            pdfPagesGrid.innerHTML = "";
-            wordPreviewContainer.innerHTML = "";
-            loadedPdfDocs = [];
-        }
-
-        async function handleFiles(filesList) {
-            resetWorkspace();
-            uploadedFiles = Array.from(filesList);
-            if (uploadedFiles.length === 0) return;
-
-            actionControls.classList.remove('hidden');
-
-            // Handle multi-PDF merge option immediately
-            const pdfFiles = uploadedFiles.filter(f => f.type === 'application/pdf');
-            if (uploadedFiles.length > 1 && pdfFiles.length === uploadedFiles.length) {
-                mergePdfBtn.classList.remove('hidden');
-                showStatus(`${uploadedFiles.length} PDFs loaded. Ready to merge.`, "bg-indigo-50 text-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-400");
-                return;
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
             }
+        });
 
-            // Single file workflows
-            const file = uploadedFiles[0];
-            currentTargetFileForOcr = file;
+        // Hide Viewport Previews
+        function resetViewports() {
+            document.getElementById('videoContainer').style.display = 'none';
+            document.getElementById('imageContainer').style.display = 'none';
+            document.getElementById('docxContainer').style.display = 'none';
+            document.getElementById('pdfContainer').style.display = 'none';
+            document.getElementById('mainVideoPlayer').src = '';
+        }
 
-            if (file.type.startsWith('image/')) {
-                runOcrBtn.classList.remove('hidden');
-                imagePreview.src = URL.createObjectURL(file);
-                imagePreview.classList.remove('hidden');
-            } else if (file.type.startsWith('video/')) {
-                videoPreviewContainer.classList.remove('hidden');
-                videoPlayer.src = URL.createObjectURL(file);
-                videoPlayer.load();
+        // Handle Web Network Streams
+        document.getElementById('streamUrlBtn').addEventListener('click', () => {
+            const url = document.getElementById('videoUrlInput').value.trim();
+            if(!url) return;
+            resetViewports();
+            const player = document.getElementById('mainVideoPlayer');
+            document.getElementById('videoContainer').style.display = 'block';
+            player.src = url;
+            player.load();
+            player.play().catch(() => alert("Stream Error: Verify link ends in media extension (.mp4) and allows network CORS policies."));
+        });
+
+        // File Selection Matrix Hooks
+        document.getElementById('fileInput').addEventListener('change', (e) => {
+            const files = Array.from(e.target.files);
+            if(files.length === 0) return;
+            resetViewports();
+            activeFiles = files;
+            const file = files[0];
+            const fileUrl = URL.createObjectURL(file);
+
+            if (file.type.startsWith('video/')) {
+                document.getElementById('videoContainer').style.display = 'block';
+                document.getElementById('mainVideoPlayer').src = fileUrl;
+            } else if (file.type.startsWith('image/')) {
+                document.getElementById('imageContainer').style.display = 'block';
+                const img = document.getElementById('mainImagePreview');
+                img.src = fileUrl;
+                currentTargetOcrImage = fileUrl;
             } else if (file.type === 'application/pdf') {
-                runOcrBtn.classList.remove('hidden');
-                savePdfOrderBtn.classList.remove('hidden');
-                pdfEditorContainer.classList.remove('hidden');
-                await loadAndRenderPdfCanvas(file);
+                document.getElementById('pdfContainer').style.display = 'block';
+                processPdfPreview(file);
+                if(files.length > 1) document.getElementById('mergePdfBtn').style.display = 'inline-block';
             } else if (file.name.endsWith('.docx') || file.name.endsWith('.doc')) {
-                wordPreviewContainer.classList.remove('hidden');
-                const arrayBuffer = await file.arrayBuffer();
-                docx.renderAsync(arrayBuffer, wordPreviewContainer);
-            }
-        }
-
-        async function loadAndRenderPdfCanvas(file) {
-            showStatus("Parsing PDF file structure...", "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300");
-            try {
-                const arrayBuffer = await file.arrayBuffer();
-                const pdfjsDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-                const pdfLibDoc = await PDFLib.PDFDocument.load(arrayBuffer);
-                
-                const pageImagesUrls = [];
-                for(let i=1; i<=pdfjsDoc.numPages; i++) {
-                    const page = await pdfjsDoc.getPage(i);
-                    const viewport = page.getViewport({ scale: 1.5 });
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    canvas.height = viewport.height;
-                    canvas.width = viewport.width;
-                    
-                    await page.render({ canvasContext: ctx, viewport: viewport }).promise;
-                    const url = canvas.toDataURL();
-                    pageImagesUrls.push(url);
-
-                    // Render sorting thumbnail inside workspace UI layout grid
-                    const div = document.createElement('div');
-                    div.className = "page-thumb bg-gray-100 dark:bg-gray-700 p-2 rounded-xl flex flex-col items-center border border-gray-200 dark:border-gray-600 shadow-2xs";
-                    div.draggable = true;
-                    div.dataset.pageIndex = i - 1;
-                    div.innerHTML = `
-                        <img src="${url}" class="max-w-full h-auto rounded-lg shadow-xs pointer-events-none">
-                        <span class="text-xs font-bold mt-2">Page ${i}</span>
-                    `;
-                    setupDragAndDropItem(div);
-                    pdfPagesGrid.appendChild(div);
-                }
-                
-                loadedPdfDocs.push({ file, pdfLibDoc, numPages: pdfjsDoc.numPages, pageImagesUrls });
-                showStatus("PDF successfully split into sorting grid tiles.", "bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-400");
-            } catch(e) {
-                showStatus("Failed to render PDF preview vectors natively.", "bg-red-50 text-red-800 dark:bg-red-900/20 dark:text-red-400");
-            }
-        }
-
-        // Simple sorting drag and drop mechanics
-        let dragSrcEl = null;
-        function setupDragAndDropItem(el) {
-            el.addEventListener('dragstart', (e) => { dragSrcEl = el; e.dataTransfer.effectAllowed = 'move'; });
-            el.addEventListener('dragover', (e) => { if (e.preventDefault) e.preventDefault(); return false; });
-            el.addEventListener('drop', (e) => {
-                e.stopPropagation();
-                if (dragSrcEl !== el) {
-                    const allNodes = Array.from(pdfPagesGrid.children);
-                    const srcIdx = allNodes.indexOf(dragSrcEl);
-                    const targetIdx = allNodes.indexOf(el);
-                    if (srcIdx < targetIdx) {
-                        pdfPagesGrid.insertBefore(dragSrcEl, el.nextSibling);
-                    } else {
-                        pdfPagesGrid.insertBefore(dragSrcEl, el);
-                    }
-                }
-                return false;
-            });
-        }
-
-        // Merge PDFs Execution
-        mergePdfBtn.addEventListener('click', async () => {
-            showStatus("Merging files into single output vector...", "bg-blue-100 text-blue-800");
-            try {
-                const mergedPdf = await PDFLib.PDFDocument.create();
-                for (const file of uploadedFiles) {
-                    const bytes = await file.arrayBuffer();
-                    const pdfDoc = await PDFLib.PDFDocument.load(bytes);
-                    const pages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
-                    pages.forEach(p => mergedPdf.addPage(p));
-                }
-                const mergedBytes = await mergedPdf.save();
-                downloadFileBlob(mergedBytes, "merged_output.pdf", "application/pdf");
-                showStatus("PDF files merged successfully!", "bg-green-100 text-green-800");
-            } catch(e) {
-                showStatus("Error during merge processing.", "bg-red-100 text-red-800");
-            }
-        });
-
-        // Export Page Ordered PDF Execution
-        savePdfOrderBtn.addEventListener('click', async () => {
-            if (loadedPdfDocs.length === 0) return;
-            showStatus("Compiling custom ordered layers...", "bg-blue-100 text-blue-800");
-            try {
-                const srcPdf = loadedPdfDocs[0].pdfLibDoc;
-                const reorderedPdf = await PDFLib.PDFDocument.create();
-                const currentOrderNodes = Array.from(pdfPagesGrid.children);
-                const indices = currentOrderNodes.map(n => parseInt(n.dataset.pageIndex));
-                
-                const pages = await reorderedPdf.copyPages(srcPdf, indices);
-                pages.forEach(p => reorderedPdf.addPage(p));
-                
-                const pdfBytes = await reorderedPdf.save();
-                downloadFileBlob(pdfBytes, "sorted_output.pdf", "application/pdf");
-                showStatus("PDF saved in new page configuration layout!", "bg-green-100 text-green-800");
-            } catch (err) {
-                showStatus("Reordering error layer initialization failed.", "bg-red-100 text-red-800");
-            }
-        });
-
-        // Run OCR Scanning Engine Implementation
-        runOcrBtn.addEventListener('click', async () => {
-            if (!currentTargetFileForOcr) return;
-            ocrEditorContainer.classList.remove('hidden');
-            ocrEditableContent.textContent = "Initializing character scanning matrices... Please wait...";
-            
-            try {
-                let imageSource = "";
-                if (currentTargetFileForOcr.type.startsWith('image/')) {
-                    imageSource = imagePreview.src;
-                } else if (currentTargetFileForOcr.type === 'application/pdf' && loadedPdfDocs.length > 0) {
-                    imageSource = loadedPdfDocs[0].pageImagesUrls[0]; // Scan page 1 default
-                }
-
-                const worker = await Tesseract.createWorker();
-                await worker.loadLanguage('eng');
-                await worker.initialize('eng');
-                const { data: { text } } = await worker.recognize(imageSource);
-                await worker.terminate();
-
-                ocrEditableContent.textContent = text || "No text structures detected within target bounding fields.";
-                showStatus("OCR text translation layout successfully populated.", "bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-400");
-            } catch (err) {
-                ocrEditableContent.textContent = "Error running character layout mapping runtime framework.";
-            }
-        });
-
-        // Copy Text Block Helper
-        copyOcrTextBtn.addEventListener('click', () => {
-            navigator.clipboard.writeText(ocrEditableContent.textContent);
-            const originalText = copyOcrTextBtn.textContent;
-            copyOcrTextBtn.textContent = "✅ Copied!";
-            setTimeout(() => copyOcrTextBtn.textContent = originalText, 2000);
-        });
-
-        // Export Searchable PDF layer construction via pdf-lib
-        exportOcrPdfBtn.addEventListener('click', async () => {
-            showStatus("Embedding OCR text transparent vectors into PDF...", "bg-blue-100 text-blue-800");
-            try {
-                const pdfDoc = await PDFLib.PDFDocument.create();
-                const page = pdfDoc.addPage([600, 800]);
-                const font = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
-                
-                const editedText = ocrEditableContent.innerText;
-                const lines = editedText.split('\n');
-                
-                let yPosition = 750;
-                page.drawText("OCR EXTRACTED EDITABLE SEARCHABLE TEXT LAYER", { x: 50, y: 780, size: 10, font, color: PDFLib.rgb(0.5, 0.5, 0.5) });
-                
-                for (let line of lines) {
-                    if (yPosition < 50) break; // Simple page layout boundary check
-                    page.drawText(line, { x: 50, y: yPosition, size: 11, font, color: PDFLib.rgb(0, 0, 0) });
-                    yPosition -= 16;
-                }
-                
-                const pdfBytes = await pdfDoc.save();
-                downloadFileBlob(pdfBytes, "searchable_ocr_document.pdf", "application/pdf");
-                showStatus("Searchable OCR PDF layer generated and exported successfully!", "bg-green-100 text-green-800");
-            } catch(e) {
-                showStatus("Failed to render text fonts directly into compilation buffers.", "bg-red-100 text-red-800");
-            }
-        });
-
-        function downloadFileBlob(bytes, filename, contentType) {
-            const blob = new Blob([bytes], { type: contentType });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = filename;
-            link.click();
-        }
-
-        // Register Service Worker for strict off-line usage
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js').then(() => {
-                    console.log('ServiceWorker engine workspace registered successfully.');
-                }).catch(err => {
-                    console.error('ServiceWorker deployment pipeline blocked:', err);
-                });
-            });
-        }
-    </script>
-</body>
-</html>
+                document.getElementById('docxContainer').style.display = 'block';
