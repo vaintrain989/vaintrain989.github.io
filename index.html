@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Local File Previewer PWA</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2563eb">
+  
+  <!-- Tailwind CSS for modern, clean UI styling -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  
+  <!-- CDN Links for PDF rendering and DOCX parsing -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docx-preview@0.1.18/dist/docx-preview.min.js"></script>
+
+  <style>
+    /* Styling fix for PDF canvas container */
+    #pdfCanvasContainer canvas {
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+      margin-bottom: 1.5rem;
+      max-width: 100%;
+      height: auto !important;
+    }
+    /* Ensure docx container matches app style */
+    .docx-wrapper {
+      background: transparent !important;
+      padding: 0 !important;
+    }
+    .docx {
+      background: white !important;
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1) !important;
+      border-radius: 0.5rem !important;
+      padding: 2rem !important;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col font-sans">
+
+  <!-- Header Banner -->
+  <header class="bg-blue-600 text-white shadow-md py-4 px-6 flex justify-between items-center">
+    <h1 class="text-xl font-bold tracking-tight">📁 PWA Local File Previewer</h1>
+    <button id="installBtn" class="hidden bg-white text-blue-600 px-4 py-2 rounded-lg font-semibold shadow hover:bg-blue-50 transition">
+      ⚡ Install App
+    </button>
+  </header>
+
+  <!-- Main Content Layout -->
+  <main class="flex-1 max-w-5xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+    
+    <!-- Left Column: Input and Details -->
+    <div class="md:col-span-1 space-y-6">
+      <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+        <h2 class="text-lg font-semibold mb-3">Select a Local File</h2>
+        <p class="text-sm text-slate-500 mb-4">Choose an image, PDF document, or Word file (.docx) directly from your device to see it previewed securely offline.</p>
+        
+        <!-- File Input Label acting as drop area wrapper -->
+        <label class="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-xl p-6 cursor-pointer bg-slate-50 hover:bg-blue-50/50 hover:border-blue-400 transition-all group">
+          <svg class="w-8 h-8 text-slate-400 group-hover:text-blue-500 mb-2 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+          <span class="text-sm font-medium text-slate-600 group-hover:text-blue-600">Click to browse files</span>
+          <input type="file" id="fileInput" class="hidden" accept="image/*, application/pdf, .docx">
+        </label>
+      </div>
+
+      <!-- File Metadata Card -->
+      <div id="metaCard" class="hidden bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+        <h3 class="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-3">File Properties</h3>
+        <div class="text-sm space-y-2">
+          <p class="truncate"><strong class="text-slate-600">Name:</strong> <span id="metaName" class="text-slate-900"></span></p>
+          <p><strong class="text-slate-600">Size:</strong> <span id="metaSize" class="text-slate-900"></span></p>
+          <p><strong class="text-slate-600">Type:</strong> <span id="metaType" class="text-slate-900"></span></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Interactive Canvas/Preview Screen -->
+    <div class="md:col-span-2 flex flex-col">
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6 flex-1 flex flex-col min-h-[400px]">
+        <h2 class="text-lg font-semibold mb-4 pb-2 border-b border-slate-100 flex items-center justify-between">
+          <span>Live Interactive Preview</span>
+          <span id="previewStatus" class="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-medium">Empty</span>
+        </h2>
+
+        <!-- Render Target Zones -->
+        <div class="flex-1 flex flex-col justify-center items-center overflow-auto max-h-[70vh]">
+          
+          <!-- Default Empty Prompt -->
+          <div id="emptyState" class="text-center py-12">
+            <p class="text-slate-400 font-medium text-base">No file uploaded yet</p>
+            <p class="text-slate-400 text-xs mt-1">Images, PDFs, and Word documents load instantly here.</p>
+          </div>
+
+          <!-- Image Render Target -->
+          <img id="imagePreview" class="hidden max-w-full max-h-[65vh] rounded-lg shadow-md object-contain" alt="Selected Preview">
+
+          <!-- Mobile-Safe Cross-Platform PDF Engine Container -->
+          <div id="pdfCanvasContainer" class="hidden w-full flex flex-col items-center"></div>
+
+          <!-- Pure JS Client-side Word Render View Container -->
+          <div id="wordPreviewContainer" class="hidden w-full overflow-x-auto text-left"></div>
+
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="bg-slate-100 border-t border-slate-200 py-3 text-center text-xs text-slate-500">
+    Running locally as an standalone progressive web app. Files stay on your local device.
+  </footer>
+
+  <script>
+    // Initialize PDFJS global configurations via script dependencies
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
+    const fileInput = document.getElementById('fileInput');
+    const emptyState = document.getElementById('emptyState');
+    const imagePreview = document.getElementById('imagePreview');
+    const pdfCanvasContainer = document.getElementById('pdfCanvasContainer');
+    const wordPreviewContainer = document.getElementById('wordPreviewContainer');
+    
+    const metaCard = document.getElementById('metaCard');
+    const metaName = document.getElementById('metaName');
+    const metaSize = document.getElementById('metaSize');
+    const metaType = document.getElementById('metaType');
+    const previewStatus = document.getElementById('previewStatus');
+
+    // Keep track of active URL object allocations to maintain optimal sandbox memory
+    let currentObjectUrl = null;
+
+    fileInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      // Clean up past ObjectURLs to avoid structural memory leaks in long sessions
+      if (currentObjectUrl) {
+        URL.revokeObjectURL(currentObjectUrl);
+      }
+
+      // Populate file specifications details dashboard UI panel
+      metaCard.classList.remove('hidden');
+      metaName.textContent = file.name;
+      metaSize.textContent = (file.size / 1024 / 1024).toFixed(2) + ' MB';
+      metaType.textContent = file.type || 'Unknown Type / Extension';
+
+      // Hide all standard canvas zones ready for conditional routing
+      emptyState.classList.add('hidden');
+      imagePreview.classList.add('hidden');
+      pdfCanvasContainer.classList.add('hidden');
+      wordPreviewContainer.classList.add('hidden');
+      pdfCanvasContainer.innerHTML = '';
+      wordPreviewContainer.innerHTML = '';
+
+      // Initialize unique local memory allocation hook
+      currentObjectUrl = URL.createObjectURL(file);
+
+      // Route 1: Local Image Parser Routing
+      if (file.type.startsWith('image/')) {
+        previewStatus.textContent = 'Image';
+        previewStatus.className = 'text-xs bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full font-medium';
+        imagePreview.src = currentObjectUrl;
+        imagePreview.classList.remove('hidden');
+      } 
+      // Route 2: Cross-platform Canvas Rendering via Core PDF.js Architecture
+      else if (file.type === 'application/pdf') {
+        previewStatus.textContent = 'PDF Document';
+        previewStatus.className = 'text-xs bg-red-100 text-red-700 px-2.5 py-1 rounded-full font-medium';
+        pdfCanvasContainer.classList.remove('hidden');
+        
+        try {
+          const loadingTask = pdfjsLib.getDocument(currentObjectUrl);
+          const pdf = await loadingTask.promise;
+          
+          // Step-render every layout layer block dynamically to support multi-page scrolls smoothly
+          for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+            const page = await pdf.getPage(pageNum);
+            const viewport = page.getViewport({ scale: 1.5 });
+            
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+            
+            pdfCanvasContainer.appendChild(canvas);
+            
+            await page.render({
+              canvasContext: context,
+              viewport: viewport
+            }).promise;
+          }
+        } catch (error) {
+          console.error("PDF engine crash detail:", error);
+          pdfCanvasContainer.innerHTML = `<p class="text-red-500 font-semibold p-4">Could not parse PDF safely: ${error.message}</p>`;
+        }
+      } 
+      // Route 3: Client-side Native OpenXML Decompressor to Render Engine
+      else if (file.name.endsWith('.docx') || file.name.endsWith('.doc')) {
+        previewStatus.textContent = 'Word Document';
+        previewStatus.className = 'text-xs bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full font-medium';
+        wordPreviewContainer.classList.remove('hidden');
+        
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          // Use client side docx renderer to map raw openXML directly into semantic structural components
+          await docx.renderAsync(arrayBuffer, wordPreviewContainer);
+        } catch (error) {
+          console.error("Word conversion structure failure:", error);
+          wordPreviewContainer.innerHTML = `<p class="text-red-500 font-semibold p-4">Could not parse Word document safely: ${error.message}</p>`;
+        }
+      } else {
+        previewStatus.textContent = 'Unsupported Format';
+        previewStatus.className = 'text-xs bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full font-medium';
+        emptyState.classList.remove('hidden');
+        emptyState.innerHTML = `<p class="text-amber-600 font-semibold">Preview mapping not registered for this extension format.</p>`;
+      }
+    });
+
+    // Register Service Worker to bind cross-domain service cache lifecycle rules
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(reg => console.log('Service Worker successfully registered with lifecycle context:', reg.scope))
+          .catch(err => console.error('Service worker installation interrupted:', err));
+      });
+    }
+
+    // Capture standard system context PWA installation requests natively
+    let deferredPrompt;
+    const installBtn = document.getElementById('installBtn');
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      installBtn.classList.remove('hidden');
+    });
+
+    installBtn.addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      console.log(`PWA distribution flow outcome selected: ${outcome}`);
+      deferredPrompt = null;
+      installBtn.classList.add('hidden');
+    });
+  </script>
+</body>
+</html>
